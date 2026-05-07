@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Grand Arena</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
 <style>
 :root{
   --sky1:#b8e4f9;--sky2:#e0f3ff;--sky3:#f0faff;
@@ -122,6 +124,16 @@ optgroup{font-weight:700;color:var(--txt2);font-family:var(--ff2);font-size:.76r
 .msg-a{background:rgba(224,84,84,.04);border-left:3px solid rgba(224,84,84,.2)}
 .msg-b{background:rgba(59,125,219,.04);border-left:3px solid rgba(59,125,219,.2)}
 .msg-rnd{font-size:.52rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--txt3);margin-bottom:3px}
+.msg code{background:rgba(0,80,120,.06);padding:1px 4px;border-radius:3px;font-family:var(--ff2);font-size:.78rem}
+.msg pre{background:rgba(0,80,120,.05);padding:8px 10px;border-radius:6px;overflow-x:auto;margin:6px 0;font-family:var(--ff2);font-size:.76rem;line-height:1.5;border:1px solid rgba(0,80,120,.06)}
+.msg pre code{background:none;padding:0}
+.msg em{font-style:italic;color:var(--txt2)}
+.msg strong{font-weight:700;color:var(--txt)}
+.msg .katex-display{margin:8px 0;overflow-x:auto}
+.msg .katex{font-size:.88em}
+.msg ul,.msg ol{margin:4px 0 4px 18px;font-size:.82rem}
+.msg li{margin-bottom:2px}
+.msg blockquote{border-left:3px solid rgba(0,80,120,.1);padding-left:10px;margin:4px 0;color:var(--txt2);font-style:italic}
 .empty{display:flex;align-items:center;justify-content:center;height:100%;color:var(--txt3);font-style:italic;font-size:.78rem}
 .vs-col{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px}
 .vs-txt{font-weight:900;font-size:.8rem;background:linear-gradient(135deg,var(--red-a),var(--aqua),var(--blue-a));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
@@ -352,20 +364,62 @@ async function callModel(provId,apiKey,modelId,msgs,temp=.9,maxTok=400){
 function showCD(sec,label){return new Promise(res=>{if(sec<=0){res();return}const w=document.getElementById("cooldownWrap"),b=document.getElementById("cooldownBar"),l=document.getElementById("cooldownLabel");w.style.display="block";let r=sec;l.textContent=(label||"Cooldown")+" \u2014 "+r+"s";b.style.transition="none";b.style.width="0%";void b.offsetWidth;b.style.transition="width "+sec+"s linear";b.style.width="100%";const iv=setInterval(()=>{r--;if(r<=0){clearInterval(iv);w.style.display="none";res()}else l.textContent=(label||"Cooldown")+" \u2014 "+r+"s"},1000)})}
 
 /* ── Prompts ── */
-function getSys(mode,topic,nA,nB){const roles={debate:"debater",roast:"roast comedian",collab:"collaborator",story:"storyteller",trivia:"trivia champion"};const rules={debate:"Under 150 words. Persuasive, witty, sharp.",roast:"Under 120 words. Devastatingly funny.",collab:"Under 150 words. Creative, build on ideas.",story:"Under 150 words. Vivid narrative.",trivia:"Under 100 words. Answer & ask."};const r=roles[mode]||roles.debate,ru=rules[mode]||rules.debate;return{a:`You are "${nA}", a ${r} in the Grand AI Arena vs "${nB}". Topic: ${topic}\nRules: ${ru} You speak FIRST.`,b:`You are "${nB}", a ${r} in the Grand AI Arena vs "${nA}". Topic: ${topic}\nRules: ${ru} You RESPOND to ${nA}.`}}
+function getSys(mode,topic,nA,nB){const roles={debate:"debater",roast:"roast comedian",collab:"collaborator",story:"storyteller",trivia:"trivia champion"};const rules={debate:"Under 150 words. Persuasive, witty, sharp.",roast:"Under 120 words. Devastatingly funny.",collab:"Under 150 words. Creative, build on ideas.",story:"Under 150 words. Vivid narrative.",trivia:"Under 100 words. Answer & ask."};const r=roles[mode]||roles.debate,ru=rules[mode]||rules.debate;const noThink="\nIMPORTANT: Respond with your argument ONLY. Do NOT include any thinking, reasoning, or inner monologue tags. Do NOT use <think>, <reasoning>, or similar XML tags. Go straight to your response.";return{a:`You are "${nA}", a ${r} in the Grand AI Arena vs "${nB}". Topic: ${topic}\nRules: ${ru} You speak FIRST.${noThink}`,b:`You are "${nB}", a ${r} in the Grand AI Arena vs "${nA}". Topic: ${topic}\nRules: ${ru} You RESPOND to ${nA}.${noThink}`}}
 function getJP(mode,nA,nB,tr){return`You are the Grand Judge. Two models competed in a ${mode}.\n\nTranscript:\n${tr}\n\nEvaluate both on 4 criteria (0-10 each, total /40).\n\n## ${nA}\nCriteria scores and **Total: XX/40**\n\n## ${nB}\nCriteria scores and **Total: XX/40**\n\n## The Verdict\n[2-3 sentences declaring the winner dramatically.]`}
 function parseScores(j,nA,nB){const ex=n=>{const i=j.indexOf(n);if(i===-1)return null;const m=/Total[:\s]*?(\d+)\s*\/\s*40/i.exec(j.slice(i,i+400));return m?parseInt(m[1]):null};return{a:ex(nA),b:ex(nB)}}
 function updateElo(rA,rB,sA,sB){const K=32,eA=1/(1+10**((rB-rA)/400)),s=sA>sB?1:sA===sB?.5:0;return{a:Math.round(rA+K*(s-eA)),b:Math.round(rB+K*((1-s)-(1-eA)))}}
 
 /* ── Rendering ── */
 function buildSelects(){const g={};MODELS.forEach(m=>{if(!g[m.provider])g[m.provider]=[];g[m.provider].push(m)});let h="";for(const[p,ms]of Object.entries(g)){h+=`<optgroup label="${PROVIDERS[p].name}">`;ms.forEach(m=>{h+=`<option value="${m.id}">${esc(m.name)} (${m.params})</option>`});h+="</optgroup>"}document.getElementById("selA").innerHTML=h;document.getElementById("selB").innerHTML=h;document.getElementById("selJ").innerHTML=h;document.getElementById("selA").value=S.mA;document.getElementById("selB").value=S.mB;document.getElementById("selJ").value=S.jM}
-function renderMd(t){if(!t)return"";return t.split("\n").map(l=>{if(l.startsWith("## "))return`<h3 style="color:var(--aqua2);margin:10px 0 4px;font-size:.92rem;font-weight:800">${esc(l.slice(3))}</h3>`;return`<p style="margin:2px 0;line-height:1.6">${l.replace(/\*\*([^*]+)\*\*/g,'<b style="color:var(--txt)">$1</b>')}</p>`}).join("")}
+function renderMd(t){if(!t)return"";return renderContent(t)}
 function usedP(){const s=new Set([gp(S.mA),gp(S.mB)]);if(S.autoJ)s.add(gp(S.jM));return[...s]}
 function mkKeys(){return usedP().filter(p=>!gk(p).trim())}
 function updFight(){const mk=mkKeys();document.getElementById("fightBtn").disabled=mk.length>0||!S.topic.trim();const wb=document.getElementById("warnBox");if(mk.length){wb.style.display="flex";wb.className="warn-box";wb.innerHTML=`<span>Missing keys: ${mk.map(p=>PROVIDERS[p].name).join(", ")}</span><button class="btn" style="font-size:.6rem;padding:2px 8px" onclick="S.tab='keys';render()">Add Keys</button>`}else wb.style.display="none"}
 function startTimer(){timerS=0;clearInterval(timerIv);timerIv=setInterval(()=>{timerS++;document.getElementById("timerDisp").textContent=String(~~(timerS/60)).padStart(2,"0")+":"+String(timerS%60).padStart(2,"0")},1000)}
 function stopTimer(){clearInterval(timerIv)}
-function addMsg(side,round,text){const c=document.getElementById(side==="a"?"msgsA":"msgsB");if(c.querySelector(".empty"))c.innerHTML="";const d=document.createElement("div");d.className="msg "+(side==="a"?"msg-a":"msg-b");d.innerHTML=`<div class="msg-rnd">Round ${round}</div><span>${esc(text)}</span>`;c.appendChild(d);c.scrollTop=c.scrollHeight}
+function addMsg(side,round,text){const c=document.getElementById(side==="a"?"msgsA":"msgsB");if(c.querySelector(".empty"))c.innerHTML="";const d=document.createElement("div");d.className="msg "+(side==="a"?"msg-a":"msg-b");d.innerHTML=`<div class="msg-rnd">Round ${round}</div><div class="msg-body">${renderContent(text)}</div>`;c.appendChild(d);c.scrollTop=c.scrollHeight}
+
+/* Strip <think>, <reasoning>, <thought>, etc. from model outputs */
+function cleanResponse(text){
+  if(!text)return"";
+  // Remove <think>...</think> and variants (Qwen, DeepSeek R1, etc.) — greedy across newlines
+  text=text.replace(/<(think|thinking|reasoning|thought|reflection|inner_monologue|scratchpad)[\s\S]*?<\/\1>/gi,"");
+  // Remove unclosed <think> blocks (model started thinking but never closed)
+  text=text.replace(/<(think|thinking|reasoning|thought|reflection|inner_monologue|scratchpad)[^>]*>[\s\S]*/gi,"");
+  // Clean leftover whitespace
+  return text.replace(/^\s*\n+/,"").replace(/\n{3,}/g,"\n\n").trim();
+}
+
+/* Render markdown + LaTeX to HTML */
+function renderContent(raw){
+  let t=esc(raw);
+  // LaTeX: display math $$...$$ first
+  t=t.replace(/\$\$([\s\S]*?)\$\$/g,function(_,m){try{return'<div class="katex-display">'+katex.renderToString(m.trim(),{displayMode:true,throwOnError:false})+'</div>'}catch{return esc(m)}});
+  // LaTeX: inline math $...$  (not greedy, avoid $5 price matches)
+  t=t.replace(/\$([^\$\n]+?)\$/g,function(_,m){if(/^\d+(\.\d+)?$/.test(m.trim()))return"$"+m+"$";try{return katex.renderToString(m.trim(),{throwOnError:false})}catch{return esc(m)}});
+  // Code blocks ```...```
+  t=t.replace(/```(\w*)\n?([\s\S]*?)```/g,function(_,lang,code){return'<pre><code>'+code.replace(/</g,"&lt;")+'</code></pre>'});
+  // Inline code `...`
+  t=t.replace(/`([^`]+)`/g,'<code>$1</code>');
+  // Bold **...**
+  t=t.replace(/\*\*([^\*]+?)\*\*/g,'<strong>$1</strong>');
+  // Italic *...*
+  t=t.replace(/(?<!\*)\*([^\*]+?)\*(?!\*)/g,'<em>$1</em>');
+  // Blockquote > ...
+  t=t.replace(/^&gt;\s?(.+)$/gm,'<blockquote>$1</blockquote>');
+  // Unordered lists - ...
+  t=t.replace(/^[-*]\s+(.+)$/gm,'<li>$1</li>');
+  t=t.replace(/(<li>[\s\S]*?<\/li>)/g,'<ul>$1</ul>');
+  t=t.replace(/<\/ul>\s*<ul>/g,'');
+  // Headers ### ...
+  t=t.replace(/^###\s+(.+)$/gm,'<strong style="font-size:.88rem">$1</strong>');
+  t=t.replace(/^##\s+(.+)$/gm,'<strong style="font-size:.92rem;color:var(--aqua2)">$1</strong>');
+  // Line breaks
+  t=t.replace(/\n/g,'<br>');
+  // Clean double <br>
+  t=t.replace(/(<br>\s*){3,}/g,'<br><br>');
+  return t;
+}
 
 function render(){
   document.getElementById("nav").innerHTML=[["arena","\u2694\uFE0F Arena"],["keys","\uD83D\uDD11 Keys"],["history","\uD83D\uDCDC History"],["leaderboard","\uD83C\uDFC6 Rankings"]].map(([k,l])=>`<button class="nav-btn ${S.tab===k?"on":""}" data-t="${k}">${l}</button>`).join("");
@@ -427,20 +481,20 @@ document.getElementById("fightBtn").onclick=async function(){
   try{
     for(let r=0;r<S.rounds;r++){
       if(S.aborted)break;S.curR=r+1;pd.textContent="\u2694 Round "+S.curR+"/"+S.rounds;
-      hA.push({role:"user",content:r===0?"Begin. Make your opening memorable.":`"${nB}" said:\n"${cB[cB.length-1]}"\n\nRespond.`});
+      hA.push({role:"user",content:r===0?`The topic is: "${S.topic}"\nYou are ${nA}. Your opponent is ${nB}. Begin with your opening statement now. Be bold and memorable.`:`"${nB}" said:\n"${cB[cB.length-1]}"\n\nRespond directly to their points.`});
       document.getElementById("colA").classList.add("sa");setTimeout(()=>document.getElementById("colA").classList.remove("sa"),400);
-      const rA=await callModel(gp(S.mA),gk(gp(S.mA)),S.mA,hA);if(S.aborted)break;hA.push({role:"assistant",content:rA});cA.push(rA);addMsg("a",S.curR,rA);
+      let rA=await callModel(gp(S.mA),gk(gp(S.mA)),S.mA,hA);rA=cleanResponse(rA);if(S.aborted)break;hA.push({role:"assistant",content:rA});cA.push(rA);addMsg("a",S.curR,rA);
       if(S.delay>0)await showCD(S.delay,"Next turn");
-      hB.push({role:"user",content:r===0?`"${nA}" opened:\n"${rA}"\n\nRespond.`:`"${nA}" said:\n"${rA}"\n\nFire back.`});
+      hB.push({role:"user",content:r===0?`The topic is: "${S.topic}"\n"${nA}" just made their opening statement:\n"${rA}"\n\nYou are ${nB}. Deliver your response now.`:`"${nA}" said:\n"${rA}"\n\nFire back with a strong response.`});
       document.getElementById("colB").classList.add("sb");setTimeout(()=>document.getElementById("colB").classList.remove("sb"),400);
-      const rB=await callModel(gp(S.mB),gk(gp(S.mB)),S.mB,hB);if(S.aborted)break;hB.push({role:"assistant",content:rB});cB.push(rB);addMsg("b",S.curR,rB);
+      let rB=await callModel(gp(S.mB),gk(gp(S.mB)),S.mB,hB);rB=cleanResponse(rB);if(S.aborted)break;hB.push({role:"assistant",content:rB});cB.push(rB);addMsg("b",S.curR,rB);
       if(r<S.rounds-1&&S.delay>0)await showCD(S.delay,"Next round");
     }
     if(S.aborted){S.phase="setup";stopTimer();render();return}
     if(S.autoJ){
       if(S.delay>0)await showCD(S.delay,"Preparing judgment");pd.textContent="\u2696 Judging...";document.getElementById("battleActions").innerHTML="";
       const tr=cA.map((a,i)=>`--- Round ${i+1} ---\n${nA}: ${a}\n${nB}: ${cB[i]||"(none)"}`).join("\n\n");
-      const jR=await callModel(gp(S.jM),gk(gp(S.jM)),S.jM,[{role:"system",content:"You are a fair, eloquent judge. Be decisive."},{role:"user",content:getJP(S.mode,nA,nB,tr)}],.7,600);
+      const jR=cleanResponse(await callModel(gp(S.jM),gk(gp(S.jM)),S.jM,[{role:"system",content:"You are a fair, eloquent judge. Be decisive. Respond with your evaluation ONLY, no thinking tags."},{role:"user",content:getJP(S.mode,nA,nB,tr)}],.7,600));
       S.judg=jR;const sc=parseScores(jR,nA,nB);const ne=updateElo(ge(S.mA),ge(S.mB),sc.a||0,sc.b||0);S.elos[S.mA]=ne.a;S.elos[S.mB]=ne.b;sv("arena_elo",S.elos);
       const winner=(sc.a||0)>(sc.b||0)?nA:(sc.b||0)>(sc.a||0)?nB:"Draw";
       S.hist.unshift({date:new Date().toISOString(),mode:S.mode,topic:S.topic.slice(0,80),modelA:S.mA,modelB:S.mB,judge:S.jM,scoreA:sc.a,scoreB:sc.b,winner,rounds:S.rounds});
